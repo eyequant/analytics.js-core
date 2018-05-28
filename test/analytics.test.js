@@ -19,7 +19,6 @@ var cookie = Analytics.cookie;
 var group = analytics.group();
 var store = Analytics.store;
 var user = analytics.user();
-var metrics = Analytics.metrics;
 
 describe('Analytics', function() {
   var analytics;
@@ -105,13 +104,11 @@ describe('Analytics', function() {
     beforeEach(function() {
       sinon.spy(user, 'load');
       sinon.spy(group, 'load');
-      sinon.spy(metrics, 'increment');
     });
 
     afterEach(function() {
       user.load.restore();
       group.load.restore();
-      metrics.increment.restore();
     });
 
     it('should gracefully handle integrations that fail to initialize', function() {
@@ -158,25 +155,6 @@ describe('Analytics', function() {
       analytics.initialize();
     });
 
-    it('should record a metric for integration errors', function() {
-      Test.prototype.initialize = function() { throw new Error('Uh oh!'); };
-      var test = new Test();
-      analytics.use(Test);
-      analytics.add(test);
-      analytics.initialize();
-      assert(analytics.initialized);
-
-      sinon.assert.calledTwice(metrics.increment);
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke', {
-        method: 'initialize',
-        integration_name: 'Test'
-      });
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke.error', {
-        method: 'initialize',
-        integration_name: 'Test'
-      });
-    });
-
     it('should not error without settings', function() {
       analytics.initialize();
     });
@@ -218,19 +196,6 @@ describe('Analytics', function() {
       analytics.addIntegration(Test);
       analytics.ready(done);
       analytics.initialize(settings);
-    });
-
-    it('should listen on integration ready events', function(done) {
-      Test.readyOnInitialize();
-      analytics.addIntegration(Test);
-      analytics.ready(done);
-      analytics.initialize(settings);
-
-      sinon.assert.calledOnce(metrics.increment);
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke', {
-        method: 'initialize',
-        integration_name: 'Test'
-      });
     });
 
     it('should still call ready with unknown integrations', function(done) {
@@ -375,12 +340,6 @@ describe('Analytics', function() {
       analytics.addIntegration(Test);
       analytics.ready(done);
       analytics.initialize(settings);
-
-      sinon.spy(metrics, 'increment');
-    });
-
-    afterEach(function() {
-      metrics.increment.restore();
     });
 
     it('should invoke a method on integration with facade', function() {
@@ -411,37 +370,6 @@ describe('Analytics', function() {
       analytics.track('Test Event');
     });
 
-    it('should record a metric when invoking an integration', function() {
-      analytics.track('Test Event');
-
-      sinon.assert.calledTwice(metrics.increment);
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.invoke', {
-        method: 'track'
-      });
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke', {
-        method: 'track',
-        integration_name: 'Test'
-      });
-    });
-
-    it('should record a metric when invoking an integration', function() {
-      Test.prototype.invoke = function() { throw new Error('Uh oh!'); };
-      analytics.identify('prateek');
-
-      sinon.assert.calledThrice(metrics.increment);
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.invoke', {
-        method: 'identify'
-      });
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke', {
-        method: 'identify',
-        integration_name: 'Test'
-      });
-      sinon.assert.calledWith(metrics.increment, 'analytics_js.integration.invoke.error', {
-        method: 'identify',
-        integration_name: 'Test'
-      });
-    });
-
     it('should support .integrations to disable / select integrations', function() {
       var opts = { integrations: { Test: false } };
       analytics.identify('123', {}, opts);
@@ -466,7 +394,6 @@ describe('Analytics', function() {
       sinon.stub(store, 'options');
       sinon.stub(user, 'options');
       sinon.stub(group, 'options');
-      sinon.stub(metrics, 'options');
     });
 
     afterEach(function() {
@@ -474,17 +401,11 @@ describe('Analytics', function() {
       store.options.restore();
       user.options.restore();
       group.options.restore();
-      metrics.options.restore();
     });
 
     it('should set cookie options', function() {
       analytics._options({ cookie: { option: true } });
       assert(cookie.options.calledWith({ option: true }));
-    });
-
-    it('should set metrics options', function() {
-      analytics._options({ metrics: { option: true } });
-      assert(metrics.options.calledWith({ option: true }));
     });
 
     it('should set store options', function() {
